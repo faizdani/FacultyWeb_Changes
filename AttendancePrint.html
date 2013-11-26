@@ -1,0 +1,1984 @@
+<!----------------------------------------------------------------------------
+ * File Name : Attendance_Class.html
+ * Author    : RenWeb (Indian) Team
+ * Purpose   : Class Attendance
+ * ***************************************************************************
+ * HISTROY   :
+ * 20-Apr-2007 -Arun 
+ * -Refine the modules, as per the sofware standards.
+ * -Add some helpful comments.
+ * -Initial file.
+ * 
+ * PLEASE ADD COMMENTS ON CHANGES USING THE BELOW FORMAT
+ * DD-MMM-YYYY -NAME @#
+ * -COMMENTS(NEW FEATURE/BUG FIX/ADD-ONS) 
+----------------------------------------------------------------------------->
+
+
+
+<HTML>
+<HEAD>
+	<SCRIPT>var isomorphicDir="../../isomorphic/";</SCRIPT>
+    <SCRIPT SRC="../../isomorphic/system/modules/ISC_Core.js"></SCRIPT>
+    <SCRIPT SRC="../../isomorphic/system/modules/ISC_Foundation.js"></SCRIPT>
+    <SCRIPT SRC="../../isomorphic/system/modules/ISC_Containers.js"></SCRIPT>
+    <SCRIPT SRC="../../isomorphic/system/modules/ISC_Grids.js"></SCRIPT>
+    <SCRIPT SRC="../../isomorphic/system/modules/ISC_Forms.js"></SCRIPT>
+    <SCRIPT SRC="../../isomorphic/system/modules/ISC_DataBinding.js"></SCRIPT>
+<!--	<SCRIPT SRC="../../isomorphic/skins/Renweb/Attendance_skin.js"></SCRIPT>-->
+		<SCRIPT SRC="../../isomorphic/skins/Renweb/PrintGradeBookSkin.js"></SCRIPT>
+
+<!--- development services------>
+<!--Userdefined js utility files-->
+	<SCRIPT SRC="../../others/cookies.js"></SCRIPT>
+    <SCRIPT SRC="../../others/Protect.js"></SCRIPT>
+    <SCRIPT SRC="../../others/Utility.js"></SCRIPT>
+<!--Userdefined .js file should be always below utility js files-->
+	<SCRIPT SRC="../../wsdl/Attendance.js"></SCRIPT>
+
+    <title> "Class Attendance"</title>
+        <style>
+
+.rmButton {
+   font: 18px arial, sans-serif;
+	color: #000000;
+}
+</style>
+</HEAD>		
+<BODY>
+<SCRIPT>
+//=============Protection=====================
+        document.oncontextmenu=Protect;
+//==========Web Services======================
+/////Cookies
+var Cookies = new CookieHandler();
+var attendanceService = isc.WebService.get("http://www.renweb.com/WebApp/Attendance/");
+var getAttnCodesDS = attendanceService.getFetchDS("GetAttendanceCodes", null, { recordXPath:"//AttnCodesList" });
+var getAttnClassDS = attendanceService.getFetchDS("GetAttendanceClasses1", null, { recordXPath:"//Table" });
+var getStudentDS = attendanceService.getFetchDS("GetClassAttendanceRoster2", null, { recordXPath:"//Table" });
+var getLunchDS = attendanceService.getFetchDS("GetLunchMenuByDay", null, { recordXPath:"//Table" });
+var getAttnDayDS = attendanceService.getFetchDS("GetClassAttendanceCodesDay", null, { recordXPath:"//RosterList" });
+var getAttnWeekDS = attendanceService.getFetchDS("GetClassAttendanceCodesWeek", null, { recordXPath:"//RosterList" });
+var getAttnTermDS = attendanceService.getFetchDS("GetClassAttendanceCodesTerm", null, { recordXPath:"//RosterList" });
+var getAttnViewSeatDS = attendanceService.getFetchDS("GetSeatingChartAttendance", null, { recordXPath:"//StudentList" });
+var getAttnEditSeatDS = attendanceService.getFetchDS("GetSeatingChartNew", null, { recordXPath:"//StudentList" });
+var getDefinedListsDS = attendanceService.getFetchDS("GetDefinedListsData", null, { recordXPath:"//Table" });
+//var getAttnTermSNDS = attendanceService.getFetchDS("GetClassAttendanceRoster2", null, { recordXPath:"//Table" });
+
+//cookies
+var SName;
+var UName;
+var StID;
+var Dcode;
+var Scode;
+var SessionID;
+var SerialNo;
+var YearID;
+var TermID;
+var TermFD;
+var TermLD;
+var varView;
+var ClassID;
+var curDate;
+var StaffID;
+var Click_Date;
+var classname;
+var plandate;
+var courseid;
+var AttnclassName;
+var AttnclassID;
+
+//on dynamic data extraction
+function dynamicCookieValues()
+{
+    //getting cookies
+    SName=Cookies.getCookie('SchoolName');
+    UName=Cookies.getCookie('StaffName');
+    StaffID = StID=Cookies.getCookie('StaffID');
+    Dcode=Cookies.getCookie('DistrictCode');
+    Scode=Cookies.getCookie('SchoolCode');
+    SessionID=Cookies.getCookie('SessionID');
+    SerialNo=Cookies.getCookie('SerialNo');
+    YearID = Cookies.getCookie('YearID');
+    TermID = Cookies.getCookie('TermID');
+    TermFD = Cookies.getCookie('TermFD');
+    TermLD = Cookies.getCookie('TermLD');
+    curDate = Cookies.getCookie('curDate');
+    varView= Cookies.getCookie('VarView');
+    ClassID=Cookies.getCookie('ClassID');
+    Click_Date = Cookies.getCookie('ChooseDate');
+    classname=Cookies.getCookie('classname');
+    plandate=Cookies.getCookie('curDate');
+    courseid=Cookies.getCookie('courseid');
+    AttnclassName=Cookies.getCookie('AttnclassName');
+    AttnclassID =Cookies.getCookie('AttnclassID');
+	// AR: ST 28062 - The calls to the web services had show scheduled classes to be hardcoded, changing it to read from the cookie.
+	showScheduledClasses = Cookies.getCookie('IsSchedule');
+	// End
+	//console.log("date in cookie is "+curDate);
+}
+
+
+function loadDayGrid(theData) {
+	var tempData = theData;
+	
+	if (theData.length > 0) {
+		for (var counter = 0; counter < theData.length; counter++) {
+			if (typeof(theData[counter]) !== undefined) {
+				theData[counter].StudentCounter = (counter+1);
+			}
+		}
+	}
+	lgMnAttn_day.setData(theData);
+	
+	// AR: hide column 2
+	getCheckNoBlock();	
+	
+}
+
+function loadWeeklyGrid(theData) {
+	var tempData = theData;
+	
+	if (theData.length > 0) {
+		for (var counter = 0; counter < theData.length; counter++) {
+			if (typeof(theData[counter]) !== undefined) {
+				theData[counter].StudentCounter = (counter+1);
+			}
+		}
+	}
+	lgMnAttn_week.setData(theData);
+	
+	// AR: ST 35194
+	setTimeout("lgMnAttn_week.resizeField(1,201)", 100);
+}
+function loadTermGrid(theData) {
+	var tempData = theData;
+	
+	if (theData.length > 0) {
+		for (var counter = 0; counter < theData.length; counter++) {
+			if (typeof(theData[counter]) !== undefined) {
+				theData[counter].StudentCounter = (counter+1);
+			}
+		}
+	}
+	lgMnAttn_term.setData(theData);
+}
+//on load
+//if (varView == null)
+//    Cookies.setCookie("VarView",1,"undefined");
+
+//varView= Cookies.getCookie('VarView');
+
+//local variables
+var DBRes   = 0;
+var varSlct = "";
+var ItemSlct = "";
+var varWhchView  = "0";//day
+var NoScharr     = new Array();//use this to record Noschooldays.
+var fp_visible   = 0;//default
+var fp1_visible   = 0;//default
+var termcol      = new Array(); 
+var seatcol      = new Array();
+var Seatarr      = new Array();
+var seatcol1      = new Array();
+var Seatarr1      = new Array();
+var monthname    = new Array("Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"); 
+var attn_mode ="NEW";
+
+var term_set_arr   = new Array();
+var Wk_set_arr   = new Array();
+var modal_attncode;
+var modal_StID;
+var modal_col;
+var dt_class_arr   = new Array();
+var selectedClass = "";
+
+//Edit seating chart
+// Global variable declaration
+var StdName = "";
+var StdID   = "";
+
+dynamicCookieValues();
+//ST 48899 Sankar K.S Since date is serialized in Attendance.js,this code causes error.So it is commented out. 
+// AR: Fix to read serialized dates
+/*curDate = new Date(curDate);
+
+if(curDate != null) {
+	curDate = curDate.toSerializeableDate()
+	
+}*/
+// AR: End
+
+
+// AR: Upgrade - hide column 2
+hideColumn2 = 0;
+
+var dyn_TermID = TermID;//initially get the Top termID
+var pick_list_TermID = TermID;
+
+
+var attn_codes=Cookies.getCookie('Attncodes');
+var arr_attn_codes=new Array();
+arr_attn_codes=attn_codes.split(',');
+
+//==========User Interface====================
+//****************MAIN ATTENDANCE PAGE*********************
+
+isc.DynamicForm.create({
+    fields:[
+            {
+            title:"Select&nbsp;Class",
+            showTitle:false,
+            width:175,
+            backgroundColor: "#d1d1d1",
+            name:"cmbMnAttn_class", 
+            _constructor:"ComboBoxItem",
+            optionDataSource:getAttnClassDS,
+            displayField:"Name",
+            valueField:"ClassID",
+            showHover:true,            
+            prompt: "Please select a Class",
+            changed:'getStudentList(0)',
+            //for pick list 
+            getPickListFilterCriteria: function () 
+                {    // this variable is used for getting the true or false of the check box
+                     var intShSchdClsOnly = '1';
+
+                     if(dynfMnAttn_Main1.getValue('chkMnAttn_shschonly') == false)
+                         intShSchdClsOnly = '0';
+                      
+                      dynfMnAttn_Main1.setValue('cmbMnAttn_class',null);
+                      // AR: 28062 - Changing ShSchdClsOnly to read from the showScheduledClasses var
+					  //return{DistrictCode:Dcode,YearID:YearID,TermID:pick_list_TermID,StaffID:StID,Date:dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate(),ShSchdClsOnly:intShSchdClsOnly,SchoolCode:Scode,Res:DBRes};
+					 return{DistrictCode:Dcode,YearID:YearID,TermID:pick_list_TermID,StaffID:StID,Date:dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate(),ShSchdClsOnly:showScheduledClasses,SchoolCode:Scode,Res:DBRes}; 
+                },
+                startRow:true,
+                endRow:true
+            },
+            {
+                name:"dtMnAttn_date", 
+                showTitle:false, 
+                _constructor:"DateItem",
+                startRow:true,
+                endRow:true,
+                type:"date",
+                changed:"getStudentList(1)"
+            },
+            {
+                titleOrientation:"right",
+                title:"Show scheduled class only",
+                name:"chkMnAttn_shschonly",
+                titleStyle:"staticTextItemAtnChkBoxBlueColr",
+                _constructor:"CheckboxItem",
+				// AR ST 28062 - changing the value to read from cookie
+                defaultValue: ( (showScheduledClasses == '1') ? true : false )
+            }
+           ],
+    autoDraw:false,
+    backgroundColor: "#d1d1d1",
+    width:"100%",
+    ID:"dynfMnAttn_Main1"
+})
+
+// AR: 34369 - The current date is not getting set for some reason
+if(classname != 'null' && ClassID !='null')
+{   
+    var map={};                    
+    map[ClassID]=classname;
+    dynfMnAttn_Main1.getItem("cmbMnAttn_class").setValueMap(map); 
+    dynfMnAttn_Main1.setValue("cmbMnAttn_class",ClassID); 
+    
+    if(curDate != null)
+    {
+        curDate =curDate.split(" ");
+        curDate = curDate[0].split("-");
+        dynfMnAttn_Main1.getField('dtMnAttn_date').setValue(curDate[1]+"/"+curDate[2]+"/"+curDate[0]);
+    }
+    getTerms_Bydate();
+}
+else 
+{   
+   dynfMnAttn_Main1.setValue('cmbMnAttn_class',null);
+}
+
+dynfMnAttn_Main1.focusInItem('cmbMnAttn_class'); 
+// End AR: 34369
+
+var displayStartDate = '';
+var displayStartDateText = '';
+var displayEndDate = '';
+var displayEndDateText = '';
+var finalDisplayText = '';
+
+// AR : To display term/week start date and end date on the header
+
+switch( varView ) {
+	
+	case '1' :  displayStartDate = new Date( dynfMnAttn_Main1.getValue('dtMnAttn_date') );
+				displayStartDateText = displayStartDate.toDateString().split(" ");
+				finalDisplayText = 'Day of ' + displayStartDateText[1] + " " + displayStartDateText[2] + " " + displayStartDateText[3] ;
+				break;
+				
+	case '2' :	displayStartDate = new Date(getWeekstartDate(dynfMnAttn_Main1.getValue('dtMnAttn_date')));
+				displayStartDateText = displayStartDate.toDateString().split(" ");
+				displayEndDate = new Date(displayStartDate);
+				displayEndDate.setDate(displayStartDate.getDate()+6);
+				displayEndDateText = displayEndDate.toDateString().split(" ");
+				finalDisplayText = "Week of " + displayStartDateText[1] + " " + displayStartDateText[2] + " " + displayStartDateText[3] + " - " + displayEndDateText[1] + " " + displayEndDateText[2] + " " + displayEndDateText[3];
+				break;
+				
+	case '4' :	termStartDate = TermFD.split(" ")[0].split("-")
+				termEndDate = TermLD.split(" ")[0].split("-");
+				displayStartDate = new Date(Number(termStartDate[0]), Number(termStartDate[1]) - 1, Number(termStartDate[2]));
+				displayStartDateText = displayStartDate.toDateString().split(" ");
+				displayEndDate = new Date(Number(termEndDate[0]), Number(termEndDate[1]) - 1, Number(termEndDate[2]));
+				displayEndDateText  = displayEndDate.toDateString().split(" ");
+				finalDisplayText = 'Term period of ' + displayStartDateText[1] + " " + displayStartDateText[2] + " " + displayStartDateText[3] + " - " + displayEndDateText[1] + " " + displayEndDateText[2] + " " + displayEndDateText[3];		
+				break;
+				
+	case '5' :  displayStartDate = new Date( dynfMnAttn_Main1.getValue('dtMnAttn_date') );
+				displayStartDateText = displayStartDate.toDateString().split(" ");
+				finalDisplayText = 'Day of ' + displayStartDateText[1] + " " + displayStartDateText[2] + " " + displayStartDateText[3] ;
+				break;			
+
+	default : 	finalDisplayText = '';	
+				break;
+}
+// End AR
+
+function getStudentList(datechg)
+{
+    //on date change or class pick
+    varDate=dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate();
+    Cookies.setCookie("curDate",varDate,"undefined");
+    
+    //Cookie Reference For Lunch Item.
+    Cookies.setCookie("AttnclassID",dynfMnAttn_Main1.getValue('cmbMnAttn_class'),"undefined"); 
+    Cookies.setCookie("AttnclassName",dynfMnAttn_Main1.getField('cmbMnAttn_class').getDisplayValue(),"undefined");  
+    Cookies.setCookie("ClassID",dynfMnAttn_Main1.getValue('cmbMnAttn_class'),"undefined"); 
+    Cookies.setCookie("classname",dynfMnAttn_Main1.getField('cmbMnAttn_class').getDisplayValue(),"undefined");      
+    //get the dynamic term
+      getTerms_Bydate();
+
+    if(datechg == 1)
+       pick_list_TermID = dyn_TermID;
+
+    //bind the class combobox previous status.
+//    var map={};                    
+//    map[dynfMnAttn_Main1.getValue('cmbMnAttn_class')]=dynfMnAttn_Main1.getField("cmbMnAttn_class").getDisplayValue();
+//    dynfMnAttn_Main1.getItem("cmbMnAttn_class").setValueMap(map); 
+//    dynfMnAttn_Main1.setValue("cmbMnAttn_class",dynfMnAttn_Main1.getValue('cmbMnAttn_class'));       
+}
+
+function getTerms_Bydate()
+{ 
+    attendanceService.callOperation( 
+                                "GetTerms",// operation name 
+                               {DistrictCode:Dcode,YearID:YearID,StaffID:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes},
+                                "//TermID|//LastDay|//FirstDay",
+                                "CallBack_getTermsBydate(data)"
+                                ); 
+}
+
+function CallBack_getTermsBydate(scdata)
+{
+    var    varDate = dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate();
+    varDate      = varDate.split(" ");
+    varDate = varDate[0].split("-");
+    var cur_date = new Date(varDate[0],varDate[1]-1,varDate[2]);
+    cur_date     = cur_date.toSerializeableDate();
+
+////    making use of system date
+//    var cur_date = new Date();
+//    cur_date.getDate();
+//    cur_date     = cur_date.toSerializeableDate();
+    
+    dyn_TermID = 0; //Not to make temid 0 Sankar K.S. 
+//    TermID = -1;
+//    TermFD = -1;
+//    TermLD = -1;
+    
+    for(var i=0;i<scdata.length;i=i+3)
+    {   
+        dt_lastday = scdata[i+1];
+        dt_lastday =  dt_lastday.split("T");
+        dt_lastday = dt_lastday[0].split("-");
+        dt_lastday = new Date(dt_lastday[0],dt_lastday[1]-1,dt_lastday[2]);
+        dt_lastday = dt_lastday.toSerializeableDate();
+        dt_firstday = scdata[i+2];
+        dt_firstday = dt_firstday.split("T");
+        dt_firstday = dt_firstday[0].split("-");
+        dt_firstday = new Date(dt_firstday[0],dt_firstday[1]-1,dt_firstday[2]);
+        dt_firstday = dt_firstday.toSerializeableDate();
+  
+        if((cur_date <= dt_lastday)&&(cur_date >= dt_firstday))
+        { 
+            var fromDate = scdata[i+2].split("T");
+            var toDate = scdata[i+1].split("T");
+            fromDate = fromDate[0];
+            toDate = toDate[0];
+            
+            dyn_TermID = TermID = scdata[i];
+            TermFD = fromDate;
+            TermLD = toDate;
+            break;
+        }
+    }
+ 
+    attendanceService.callOperation( 
+                                "GetAttendanceClasses1",// operation name 
+                                // AR 28062 - Remove the hardcoded value of 1 under ShSchdClsOnly
+								//{DistrictCode:Dcode,YearID:YearID,TermID:dyn_TermID,StaffID:StID,Date:dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate(),ShSchdClsOnly:'1',SchoolCode:Scode,Res:DBRes},                                
+                                {DistrictCode:Dcode,YearID:YearID,TermID:dyn_TermID,StaffID:StID,Date:dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate(),ShSchdClsOnly:showScheduledClasses,SchoolCode:Scode,Res:DBRes},
+								"//ClassID",
+                                "CallBack_checkclassBydate(data)"
+                                ); 
+    
+}
+
+function CallBack_checkclassBydate(scdata)
+{
+    for(var i = 0; i < scdata.length;i++)
+    {
+        dt_class_arr.push(new Array(scdata[i])); 
+    }    
+//    varWhchView  = Cookies.getCookie('VarView');////eswar
+//     alert("eswar3");
+//     alert(varWhchView);
+//      listVisibility("5");
+	//ST# 240450 - fdani(11/26/2013) - Call this only for Day View, 
+	//else it breaks week view(not all students display in the list)
+	 if(varView == 1)
+    	listVisibility(varView);
+    
+}
+
+
+isc.HLayout.create({
+                    members:
+                    [dynfMnAttn_Main1],
+                    autoDraw:false,
+                    height:"5%",
+                    width:"100%",
+                    ID:"hlMnAttn_Main1"
+})
+//                  
+//isc.DynamicForm.create({
+//    fields:[
+//            {
+//            valueMap:{
+//                    "1":"<b>Day</b>",
+//                    "2":"<b>Week</b>", 
+//                    "4":"<b>Term</b>", 
+//                    "5":"<b>Seating chart</b>"
+//                  },
+//            name:"rboMnAttn_Itemview",
+//            showTitle:false,
+//            _constructor:"RadioGroupItem",
+//            width:250,
+//            defaultValue:varView,
+//            change:"list_radiobutton(value)"
+//            }
+//           ],
+//    autoDraw:false,
+//    width:"100%",
+//    backgroundColor: "#d1d1d1",
+//    ID:"dynfMnAttn_filter1"
+//})
+
+
+//eswar set cookie for vwChoice get cookie VarView
+
+//list_radiobutton(VarView);
+
+
+//function list_radiobutton(vwChoice)
+//{
+////    Cookies.setCookie("VarView", vwChoice, "undefined");
+////    varWhchView = vwChoice; 
+//     varWhchView  = Cookies.getCookie('VarView');
+////     alert(varWhchView);
+//// alert("eswar1");
+////    listVisibility("2");
+
+////    listVisibility(varWhchView);
+//}
+
+//onload
+onloadCollectNoSchoolDays();
+
+function onloadCollectNoSchoolDays()
+{
+    attendanceService.callOperation( 
+                                    "GetNoSchoolDay", // operation name 
+                                    {DistrictCode:Dcode,FromDate:TermFD,ToDate:TermLD,SchoolCode:Scode,StaffID:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes}, //@1 // inbound data for operation 
+                                    "//DaySetupDate|//Res", //XPath, Type, or ElementName to extract result
+                                    "checkOutNoSchoolDays(data)"// script to execute when operation returns
+                                    );
+}
+
+function checkOutNoSchoolDays(scdata)
+{
+    if(scdata.length != 0)
+    {     
+        for(var i=0;i<scdata.length;i++)
+        {
+            var temp=scdata[i].split("T");
+            NoScharr.push(new Array(temp[0]));
+        }
+    }  
+}
+
+//isc.ListGrid.create({
+//                     dataSource:getAttnCodesDS,
+//                     alternateRecordStyles:true,
+//                     baseStyle:"myBoxedSAlternateGridCell",//"myBoxedAlternateGridCell",
+//                     leaveScrollbarGap:false,
+//                     fields:[
+//                        {
+//                        name:"AttendanceCode",
+//                        title:"Codes",
+//                        showHover:true,
+//                        align:'center'
+//                        },
+//                        {
+//                        name:"Name",
+//                        width:"50%",
+//                        titleAlign:'center',
+//                        align:'left'
+//                        },
+//                        {
+//                        name:"Weight",
+//                        align:'center'
+//                        }
+////                        {
+////                        name:"Absent",
+////                        align:'center'
+////                        },
+////                        {
+////                        name:"Tardy",
+////                        align:'center'
+////                        }
+//                       ],
+//        height:"25%",
+//        cellClick:function(record, state)
+//                         {
+//                            varSlct=record.AttendanceCode;
+//                         },
+//                         getCellCSSText: function (record, rowNum, colNum) 
+//                         {
+//                            if(colNum == 0)
+//                            {
+//                                if(record[this.getFieldName(colNum)].search('A') != -1)
+//                                    return "font-weight:bold; color:red;";
+
+//                                if((record[this.getFieldName(colNum)].search('T') != -1) && (record[this.getFieldName(colNum)].search('F') == -1))
+//                                    return "font-weight:bold; color:green;";
+//                            }
+//                         },
+//        recordClick:function()
+//        {
+//            var record = this.getSelectedRecord();
+//            return(null);
+//        },
+//        bodyBackgroundColor:"#d1d1d1",
+//        ID:"lgMnAttn_view"
+//});
+
+//onload
+//lgMnAttn_view.fetchData({DistrictCode:Dcode,SchoolCode:Scode,StaffID:StID,ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes});
+
+//isc.SectionStack.create({
+//          visibilityMode:"multiple",
+//    sections:[
+//            {
+//               title:"Select&nbsp;Class",
+//               items:[hlMnAttn_Main1],
+//                autoShow:true,
+//                canCollapse:false,
+//                resizeable:false,
+//                backgroundColor: "#d1d1d1",
+//               ID:"sssMnAttn_section2"
+//            },
+//             {
+//                title:"View",
+//                items:[dynfMnAttn_filter1],
+//                autoShow:true,
+//                canCollapse:false,
+//                resizeable:false,
+//                width:"100%",
+//                ID:"sssMnAttn_section1"
+//            },
+//            {
+//                title:"Attendance",
+//                items:[
+//                       lgMnAttn_view
+//                      ],
+//                autoShow:true,
+//                canCollapse:false,
+//                resizeable:false,     
+//                ID:"sssMnAttn_section3"
+//            }
+//           ],
+//    autoDraw:false,
+//    ID:"ssMnAttn_section"
+//})
+
+//isc.VLayout.create({
+//                    members:[ssMnAttn_section],
+//                    autoDraw:false,
+//                    width:"27%",
+//                    showResizeBar:true,
+//                    backgroundColor:"#f1f1f1",
+//                    ID:"vlMnAttn_filter"
+//})
+
+//DAY VIEW
+isc.ListGrid.create({
+                    dataSource:getAttnDayDS,
+                     alternateRecordStyles:true,
+                     leaveScrollbarGap:false,
+                     fastCellUpdates:true,
+                     canAcceptDrop:true,
+
+					 autodraw:false,
+					 overflow:"visible", // AR: ST #35194 
+					 bodyOverflow:"visible", // AR: ST #35194 
+					   width:600, // AR: ST #35194 
+					   //top:"20%",
+					   left:"1%", 
+
+					   //height:"100%",  
+                    baseStyle: "my2BoxedAlternateGridCell",
+                     fields:[
+								{
+									name:"StudentCounter",
+									title:" ",
+									width:25,
+									align:'center',
+									canSort:false
+								},
+								{
+									name:"StudentName",
+									title:"Student",
+									width:200,
+									align:'left',
+									canSort:true
+								},
+								{
+									name:"attendancecodes1",
+									title:"#1",
+									width:60,
+									canSort:false,
+									align:'center'
+								},
+								{
+									name:"comments1",
+									title:"#1 Comment",
+									length:30,
+									canSort:false,
+									align:'center'
+								},
+								{
+									name:"attendancecodes2",
+									title:"#2",
+									width:60,
+									canSort:false,
+									align:'center'
+								},
+								{
+									name:"comments2",
+									title:"#2 Comment",
+									length:30,
+									canSort:false,
+									align:'center'
+								}
+                            ],
+                     showHover:false,
+                   
+                   
+                    getCellCSSText: function (record, rowNum, colNum) 
+                    {  
+                        //check against sun/sat & PH (noschoolday)
+                        if(getSunSat_NoSchool_Day(dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate(),NoScharr) == 1)
+                        {
+                            if((colNum == 2) || (colNum == 4))
+                                return "font-weight:bold; color:white;background-color:black;";
+                        }
+                     
+                        if(colNum == 1)
+                        { 
+                             var rec1;
+                            for (var i=0;i<arr_attn_codes.length;i=(i+2))
+                            {
+                               
+                                if ((record[this.getFieldName(colNum+1)]==arr_attn_codes[i])||(record[this.getFieldName(colNum+3)]==arr_attn_codes[i]))
+                                {
+                                    if (arr_attn_codes[i+1]==1)
+                                    return "font-weight:bold; color:white;background-color:red;";
+                                    else if (arr_attn_codes[i+1]==2)
+                                    return "font-weight:bold; color:white;background-color:green;";
+//                                    else if (arr_attn_codes[i+1]==0)
+//                                    return "font-weight:bold; color:white;background-color:black;";
+                                }
+
+                            }
+                        }
+                     
+                        if((colNum == 2) || (colNum == 4))
+                        {
+                                 for (var i=0;i<arr_attn_codes.length;i=(i+2))
+                                {
+                               
+
+                                if (record[this.getFieldName(colNum)]==arr_attn_codes[i])
+                                {
+                                    if (arr_attn_codes[i+1]==1)
+                                    return "font-weight:bold; color:red;";
+                                    else if (arr_attn_codes[i+1]==2)
+                                    return "font-weight:bold; color:green;";
+                                    else  if (arr_attn_codes[i+1]==0)
+                                    return "font-weight:bold; color:black;";
+                                }
+
+                            }
+                        }
+						return "font-weight:bold; color:black;";
+                  },
+//                  bodyBackgroundColor:"#d1d1d1",
+                  ID:"lgMnAttn_day"
+});
+
+isc.DynamicForm.create({
+    fields:[
+            {
+            title:"comment",
+            name:"cmbMnAttn_cmt", 
+            showTitle:false,
+            length:30,
+            _constructor:"ComboBoxItem",
+            optionDataSource:getDefinedListsDS,
+            valueField:"DLID",
+            displayField:"Name",
+            getPickListFilterCriteria: function () 
+             { 
+                return{DistrictCode:Dcode,SchoolCode:Scode,Type:'Attendance Comment',ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes};
+             }
+            },
+            {
+            name:"btnMnGb_OK",
+            title:"OK",
+            align:'center',
+            colSpan:2,
+            _constructor:"ButtonItem",
+            click:function () 
+             {  
+                mwMnAttn_comment.closeClick();
+                
+                if(modal_col == 2)
+                    callSvc_SaveCodenComments(1,modal_attncode,trim(dynfMnAttn_comment.getField("cmbMnAttn_cmt").getDisplayValue()),modal_StID,attn_mode);
+                else                    
+                    callSvc_SaveCodenComments(2,modal_attncode,trim(dynfMnAttn_comment.getField("cmbMnAttn_cmt").getDisplayValue()),modal_StID,attn_mode);
+
+                lgMnAttn_day.setData([]);
+				// AR: 28062
+                //lgMnAttn_day.fetchData({DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),TermID:TermID,Attn_Date:dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate(),ShSchdClsOnly:0,FromDate:TermFD,ToDate:TermLD,StaffID:StID,ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes}); // Rakesh
+				
+				//AR: 31165 - added school code param
+				lgMnAttn_day.fetchData({DistrictCode:Dcode, SchoolCode: Scode, ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),TermID:TermID,Attn_Date:dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate(),ShSchdClsOnly:showScheduledClasses,FromDate:TermFD,ToDate:TermLD,StaffID:StID,ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes}); // Rakesh
+                // End
+				dynfMnAttn_comment.setValue('cmbMnAttn_cmt','');
+             }
+            }
+            ],
+            padding:15,
+            autoDraw:false,
+            ID:"dynfMnAttn_comment"
+})
+
+//window for the attendance comments
+isc.Window.create({
+    ID: "mwMnAttn_comment",
+    title: "Comment",
+    height:120, 
+    width:200, 
+    showHeaderIcon:false, 
+    showMinimizeButton:false,
+    canDragResize:false, 
+    canDragReposition:false,
+    animateMinimize:true,
+    showResizer:false,
+    autoCenter:true,
+    isModal: true,
+    autoDraw: false,
+    items: [dynfMnAttn_comment]
+})
+
+//WEEK VIEW
+isc.ListGrid.create({
+                    autoDraw:false, 
+                    dataSource:getAttnWeekDS,
+                    alternateRecordStyles:true,
+                     leaveScrollbarGap:false,
+                     fastCellUpdates:true,
+                     canAcceptDrop:true,
+                      top:"20%",
+                    fields:[
+								{
+									name:"StudentCounter",
+									title:" ",
+									width:25,
+									align:'center',
+									canSort:false
+								},
+								{
+									name:"StudentName",
+									title:"Student",
+									width:200,
+									canSort:true,
+									align:'left'
+								},
+								{
+									name:"attendance_mon",
+									title:"MON",
+									canSort:false,
+									align:'center'
+								},
+								{
+									name:"attendance_tue",
+									title:"TUE",
+									canSort:false,
+									align:'center'
+								},
+								{
+									name:"attendance_wed",
+									title:"WED",
+									canSort:false,
+									align:'center'
+								},
+								{
+									name:"attendance_thu",
+									title:"THU",
+									canSort:false,
+									align:'center'
+								},
+								{
+									name:"attendance_fri",
+									title:"FRI",
+									canSort:false,
+									align:'center'
+								},
+								{
+									name:"attendance_sat",
+									title:"<span style='color:blue;font-weight:bold'>SAT</span>",
+									// AR : Added width to reduce the width for Sat and Sun columns
+									width : 100,
+									canSort:false,
+									align:'center'
+								},
+								{
+									name:"attendance_sun",
+									title:"<span style='color:blue;font-weight:bold'>SUN</span>",
+									// AR : Added width to reduce the width for Sat and Sun columns
+									width : 100,
+									canSort:false,
+									align:'center'
+								}
+                           ],
+                    baseStyle: "my2BoxedAlternateGridCell",                          
+                    showHover:false,
+                    
+                 
+                  getCellCSSText: function (record, rowNum, colNum) 
+                  {  
+                       if((colNum ==7) || (colNum ==8) || 
+                        (colNum ==Wk_set_arr[0]) ||(colNum ==Wk_set_arr[1]) ||
+                        (colNum ==Wk_set_arr[2]) ||
+                        (colNum ==Wk_set_arr[3]) ||
+                        (colNum ==Wk_set_arr[4]))
+                                return "font-weight:bold; color:white;background-color:black;";
+                                
+                        if(colNum != 0)
+                        {
+                                for (var i=0;i<arr_attn_codes.length;i=(i+2))
+                                {
+                               
+
+                                if (record[this.getFieldName(colNum)]==arr_attn_codes[i])
+                                {
+                                    if (arr_attn_codes[i+1]==1)
+                                    return "font-weight:bold; color:red;";
+                                    else if (arr_attn_codes[i+1]==2)
+                                    return "font-weight:bold; color:green;";
+                                    else  if (arr_attn_codes[i+1]==0)
+                                    return "font-weight:bold; color:black;";
+                                }
+                                
+                               }
+                        }
+
+                        if(colNum == 7 || colNum == 8)
+                            return "font-weight:bold; color:white;background-color:black;";
+                  },
+//                  bodyBackgroundColor:"#d1d1d1",
+					overflow:"visible",// AR: ST #35194
+				  bodyOverflow:"visible",// AR: ST #35194
+				  width:925,
+                  ID:"lgMnAttn_week"
+});
+
+function callSvc_SaveCodeWeek(col,code,note,student_id,day)
+{
+//    dynamicCookieValues();
+    attendanceService.callOperation( 
+                                "SaveStudentAttendanceNew1",// operation name 
+                                {DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),Column:col,StudentID:student_id,Date:getWeekClickDate(dynfMnAttn_Main1.getValue('dtMnAttn_date'),(day-1)),Note:note,Mode:"NEW",Code:code,StaffID:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes},                                  "//default:Res",
+                                "(data[0]== 0)?Dummy_OK():isc.say('Save Operation failed!')"
+                                ); 
+}
+
+//TERM VIEW
+isc.ListGrid.create({
+                     autoDraw:false, 
+                     dataSource:getAttnTermDS,
+                     alternateRecordStyles:true,
+                     leaveScrollbarGap:false,
+                     canHover:true,
+                     cellHoverHTML:"return record.StudentName;",
+                     hoverProperties:{width:150, height:20},
+                     fields:termcol,
+                     baseStyle: "my2BoxedAlternateGridCell",
+                     fastCellUpdates:true,
+                      top:"20%",
+                     canAcceptDrop:false,//true,
+                    getCellCSSText: function (record, rowNum, colNum) 
+                    { 
+						// Quick hack to format the student count and student name columns; otherwise proceed to determine if school day
+						if (colNum < 2) {
+							return "font-weight:bold; color:black; background-color:white;";
+						}
+                        
+						// AR: Moved from end to here
+						for (var i=1;i<term_set_arr.length;i++)//for no schooldays
+						{
+								if (colNum == ( term_set_arr[i]) )
+									return "font-weight:bold; color:white; background-color:black;";   
+						}
+						
+						for (var i=0;i<arr_attn_codes.length;i=(i+2))
+                                {
+                               
+
+                                if (record[this.getFieldName(colNum)]==arr_attn_codes[i])
+                                {
+                                    if (arr_attn_codes[i+1]==1)
+                                    return "font-weight:bold; color:red;";
+                                    else if (arr_attn_codes[i+1]==2)
+                                    return "font-weight:bold; color:green;";
+                                    else  if (arr_attn_codes[i+1]==0)
+                                    return "font-weight:bold; color:black;";
+                                }
+
+                            }
+                          for(var j=0; j< termcol.length;j++)
+                          {
+                               if((colNum == (term_set_arr[0]+(7*j))) ||
+                                 (colNum == (term_set_arr[0]+(7*j) + 1)) )
+                                    return "font-weight:bold; color:white; background-color:black;";
+                          }
+                          
+                    },
+                   
+//                    bodyBackgroundColor:"#d1d1d1",
+                    ID:"lgMnAttn_term"
+})
+
+//onload for attendance
+SetTermColnames();
+
+function SetTermColnames()
+{
+    // Create Date objects from TermFD and TermFD.
+	var dt = ( TermFD.indexOf("T") >= 0 ) ? TermFD.split("T") : TermFD.split(" ");
+    dt = dt[0].split("-");
+    dt = new Date(dt[0],dt[1]-1,dt[2]);
+	
+    var ldate = ( TermLD.indexOf("T") >= 0 ) ? TermLD.split("T") : TermLD.split(" ");
+    ldate = ldate[0].split("-");
+    ldate = new Date(ldate[0],ldate[1]-1,ldate[2]);
+
+    // Empty the termcol array if it already contains some data.
+    termcol.length = 0;
+    termcol.push({      
+                        name:"StudentCounter",
+                        title:" ",
+                        showHover:true,
+                        width:25,
+//                        canSort:true,
+                        align:'center'
+                 });
+    termcol.push({      
+                        name:"StudentName",
+                        title:"Student",
+                        showHover:true,
+                        width:150,
+//                        canSort:true,
+                        align:'left'
+                 });
+
+    var prev_day=0;
+
+	
+    while(dt <= ldate)
+    {
+        var mnth = dt.getMonth();
+        var day = dt.getDate();
+       
+            if((prev_day == 0) || (prev_day != day))
+            {       
+              termcol.push({name:"attendance_" + monthname[mnth] + "_" + day,
+                                title:monthname[mnth] + "/" + day,
+                                showHover:true,
+                                width:60,
+                                align:'center',
+                                canSort:false
+                        }); 
+            }     
+
+            prev_day = day;
+		// AR: Fix #ST26654 -  Did not accomodate daylight saving
+        //dt.setTime(dt.getTime() + 86400000);
+		dt.setDate(dt.getDate() + 1);
+		// End		
+    }
+}
+
+function callSvc_SaveCodeTerm(col,code,note,student_id,day)
+{
+    var dt = TermFD.split("T");
+    dt = dt[0].split("-");
+    dt = new Date(dt[0],dt[1]-1,dt[2]);
+    //dt.setTime(dt.getTime() + 86400000*(day-1)); 
+    dt.setTime(dt.getTime() + 86400000*(day-1)); 
+    
+//    dynamicCookieValues();
+    attendanceService.callOperation( 
+                                "SaveStudentAttendanceNew1",// operation name 
+                                {DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),Column:col,StudentID:student_id,Date:dt.toSerializeableDate(),Note:note,Mode:"NEW",Code:code,StaffID:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes}, 
+                                  "//default:Res",
+                                "(data[0]== 0)?isc.clearPrompt():isc.say('Save Operation failed!')"
+                                ); 
+}
+
+//SEATING CHART
+isc.ListGrid.create({
+                     autoDraw:false, 
+                     dataSource:getAttnViewSeatDS,
+                     leaveScrollbarGap:false,
+                     showHeader:false,
+                     fields:seatcol,
+                    cellHeight:75,
+                     top:"20%",
+                    baseStyle: "myBoxedVClearGridCell",
+                    fastCellUpdates:true,
+                    canAcceptDrop:true,
+                    showHover:false,
+					 overflow:"visible", // AR: ST #35194
+					 bodyOverflow:"visible", // AR: ST #35194
+                    getCellCSSText: function (record, rowNum, colNum) 
+                    {  
+						// AR ST 35125
+						var currentStudAttendanceCode = record[this.getFieldName(colNum)].split('<br>')[1];
+						for (var i=0;i<arr_attn_codes.length;i=(i+2))
+						{
+							if (currentStudAttendanceCode==arr_attn_codes[i])
+							{
+								if (arr_attn_codes[i+1]==1)
+									return "font-weight:bold; color:red;";
+								else if (arr_attn_codes[i+1]==2)
+									return "font-weight:bold; color:green;";
+								else  if (arr_attn_codes[i+1]==0)
+									return "font-weight:bold; color:black;";
+							}
+					   }
+					   // End ST 35125
+                    },
+
+//                    bodyBackgroundColor:"#d1d1d1",
+                    ID:"lgMnAttn_seating"                    
+})
+
+//onload for attendance seating chart
+SetSeatCol();
+
+function SetSeatCol()
+{
+    // Empty the termcol array if it already contains some data.
+    seatcol.length = 0;
+    
+    seatcol.push({      name:"SlNo",
+                        width:100,
+                        align:'center'
+                        });
+    
+    for(var i=0;i<=15;i++)
+    {
+            seatcol.push({      name:"col" + i,
+                                width:100,
+                                align:'center',
+                                canSort:false
+                        }); 
+    }
+}
+
+//for day & seating view
+function callSvc_SaveCodenComments(col,code,note,student_id,mode)
+{
+//    dynamicCookieValues();
+    attendanceService.callOperation( 
+                                "SaveStudentAttendanceNew1",// operation name 
+                                {DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),Column:col,StudentID:student_id,Date:dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate(),Note:note,Mode:mode,Code:code,StaffID:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes},
+                                  "//default:Res",
+                                "(data[0]== 0)?Dummy_OK():isc.say('Save Operation failed!')"
+                                ); 
+}
+var duedate=new Date();
+duedate=duedate.toDateString();
+        duedate=duedate.split(" ");
+        var duedate_month_name=duedate[1]+" "+duedate[2]+" "+duedate[3];
+isc.DynamicForm.create({
+    fields:[
+                 {
+                    defaultValue:classname+" Attendance", 
+                    name:"stxtMnGb_class", 
+                    showTitle:false, 
+                    whdth:"10%",
+//                  textBoxStyle:"staticTextItemWhiteColor",
+                    textBoxStyle: 'rmButton',
+                    _constructor:"StaticTextItem",
+                    colSpan:2,
+                    align:'left',
+                    startRow:true,
+                    endRow:false
+                    },
+                    {
+                    // AR: Print the appropriate date for which the grid is being displayed
+					//defaultValue: "Printed: "+duedate_month_name + " &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; " + "Week of " + displayStartDateText[1] + " " + displayStartDateText[2] + " " + displayStartDateText[3] + " - " + displayEndDateText[1] + " " + displayEndDateText[2] + " " + displayEndDateText[3], 
+                    defaultValue: "Printed: "+duedate_month_name + " &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; " +  finalDisplayText,
+					// End AR
+					name:"stxtMnGb_dt", 
+                    showTitle:false, 
+                    width:"30%",
+//                  textBoxStyle:"staticTextItemWhiteColor",
+                    textBoxStyle: 'rmButton',
+                    _constructor:"StaticTextItem",
+                    colSpan:2,
+                    align:'left',
+                    startRow:false,
+                    endRow:true
+                    }
+    ],
+    ID:"DynamicForm0",
+    height:"20%",
+    width:"100%",
+    autoDraw:false
+})
+
+
+
+//isc.VLayout.create({
+//    members:[
+//        DynamicForm0
+//    ],
+//    height:"100%",
+//    width:"100%",
+//    ID:"vlMnAttn_main1",
+//    autoDraw:true
+//})
+
+isc.HLayout.create({
+        members:[
+              
+                lgMnAttn_day,
+                lgMnAttn_week,
+                lgMnAttn_term,
+                lgMnAttn_seating
+                ],
+        autoDraw:false,
+       
+        height:"90%",
+        width:"99%",
+        ID:"hlMnAttn_Main2"
+})
+
+//isc.DynamicForm.create({
+//    fields:[
+//            {
+//            title:"Edit seating chart", 
+//            name:"btnMnAttn_seatingchtsave",
+//            width:"20%",
+//            _constructor:"ButtonItem",
+//            startRow:true,
+//            endRow:false,
+//           click:"EditSeatingChart_show()"
+//            },
+//            {
+//            title:"Fill Present", //need to be discussed
+//            name:"btnMnAttn_FillPresent",
+//            width:"16%",
+//            _constructor:"ButtonItem",
+//            align:'right',
+//            startRow:false,
+//            endRow:false,
+//            click:"fill_Attendance(1)"
+//            },
+//            {
+//            title:"Fill Present1", //need to be discussed
+//            name:"btnMnAttn_FillPresent1",
+//            width:"16%",
+//            _constructor:"ButtonItem",
+//            align:'right',
+//            startRow:false,
+//            endRow:false,
+//           // colSpan:2, //Varun 12/28/2007
+//            click:"fill_Attendance(1)"
+//            },
+//              {
+//            width:"1%",
+//            name:"SpacerFillPresent2",
+//            _constructor:"SpacerItem"
+//            },
+//            {
+//            title:"Fill Present2", //need to be discussed
+//            name:"btnMnAttn_FillPresent2", 
+//            width:"16%",
+//            _constructor:"ButtonItem",
+//            align:'left',
+//            startRow:false,
+//            endRow:false,
+//            click:"fill_Attendance(2)"
+//            }
+//           ],
+//    autoDraw:false,
+//    numCols:4,
+//    backgroundColor: "#d1d1d1",
+//    ID:"dynfMnAttn_Main3"
+//})
+
+function fill_Attendance(fp_data)
+{
+        if(dynfMnAttn_Main1.getValue('cmbMnAttn_class') == null)
+           isc.say("Please select a Valid Date and Class!");
+        else
+        {   
+                attendanceService.callOperation( 
+                                "FillPresent",// operation name 
+                                {DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),Column:fp_data,Date:dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate(),StaffID:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes},
+                                "//FillPresentResult",
+                                "callback_fillAttendance()"
+                                ); 
+      
+         }   
+}
+
+function callback_fillAttendance()
+{
+ varWhchView  = varView;
+
+}
+ varWhchView  = varView;
+listVisibility(varView);
+
+function listVisibility(number)
+{
+    number  = Cookies.getCookie('VarView');
+//    alert(varView);
+//hide all list grids first
+    lgMnAttn_day.hide();
+    lgMnAttn_week.hide();
+    lgMnAttn_term.hide();
+    lgMnAttn_seating.hide();
+//hide all the fillpresent buttons
+//    dynfMnAttn_Main3.getField('btnMnAttn_FillPresent').hide();
+//    dynfMnAttn_Main3.getField('btnMnAttn_FillPresent1').hide();
+//    dynfMnAttn_Main3.getField('btnMnAttn_FillPresent2').hide();
+
+//get the dynamic cookie values
+    if(varWhchView != "0")
+    { 
+        //check for the populated class against the current date term class
+		//ST 46973 Sankar KS
+		//Added to display weekly grid even if the class is not scheduled
+		//on selected date.
+		var class_exist = true;
+		if(number == 1)
+			class_exist = false;
+        //End ST 46973 Sankar KS
+        for(var i= 0; i < dt_class_arr.length; i++)
+        {
+			
+            if(dt_class_arr[i] == dynfMnAttn_Main1.getValue('cmbMnAttn_class'))
+            {
+				
+                class_exist = true;
+                break;
+            }   
+				
+        }
+		//dyn_TermID = TermID;
+        //isc.say("term id is "+ dyn_TermID);
+        if(((dyn_TermID != 0) && (class_exist == true)) || (number == 5))
+        {
+			
+//check for class
+            if(dynfMnAttn_Main1.getValue('cmbMnAttn_class') != null)
+			//if(ClassID != null && ClassID != 0)
+            {    
+				
+                switch(number)
+                {
+                    case "0":
+                               alert("You are at wrong choice!");
+                            break;
+                    case "1":
+                            lgMnAttn_day.show();
+//                            dynfMnAttn_Main3.numCols=4;
+//                            dynfMnAttn_Main3.getField('btnMnAttn_FillPresent1').show();
+//                            dynfMnAttn_Main3.getField('btnMnAttn_FillPresent2').show();
+                            lgMnAttn_day.setData([]);
+							// AR: 28062
+                            // lgMnAttn_day.fetchData({DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),TermID:dyn_TermID,Attn_Date:dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate(),ShSchdClsOnly:0,FromDate:TermFD,ToDate:TermLD,StaffID:StID,ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes}); 
+							
+							//AR:31165 - added school code param
+							lgMnAttn_day.fetchData({DistrictCode:Dcode, SchoolCode: Scode, ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),TermID:dyn_TermID,Attn_Date:dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate(),ShSchdClsOnly:showScheduledClasses,FromDate:TermFD,ToDate:TermLD,StaffID:StID,ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes}, "loadDayGrid(data)"); 
+                            // End
+							break;
+                    case "2":
+                            Wk_set_arr.length = 0;
+                            Wk_set_arr = getSunSat_NoSchool_Week(dynfMnAttn_Main1.getValue('dtMnAttn_date'),NoScharr);
+							
+                            lgMnAttn_week.show();
+//                            dynfMnAttn_Main3.numCols=2;
+                            lgMnAttn_week.setData([]);
+							
+                            lgMnAttn_week.fetchData({DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),TermID:dyn_TermID,Attn_Date:getWeekstartDate(dynfMnAttn_Main1.getValue('dtMnAttn_date')),FromDate:TermFD,ToDate:TermLD,StaffID:StID,ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes}, "loadWeeklyGrid(data)");
+                            break;
+                    case "3":
+                            isc.say("UnderConstruction");
+                            break;
+                    case "4":
+                            term_set_arr.length =0;
+                            term_set_arr=getSunSat_NoSchool_Term(TermFD,NoScharr,termcol.length);
+                            SetTermColnames(); // Update the termcol array to reflect the date selected. 
+                            lgMnAttn_term.show();
+//                            dynfMnAttn_Main3.numCols=2;
+                            lgMnAttn_term.setFields(termcol);
+							
+                            lgMnAttn_term.setData([]);
+                            lgMnAttn_term.fetchData({DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),TermID:dyn_TermID,FromDate:TermFD,ToDate:TermLD,StaffID:StID,ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes}, "loadTermGrid(data)");
+                            break;
+                    case "5":
+                            SetSeatArray();
+//                            dynfMnAttn_Main3.numCols=3;
+//                            dynfMnAttn_Main3.getField('btnMnAttn_FillPresent').show();
+                            lgMnAttn_seating.show();
+                            lgMnAttn_seating.setData([]);
+                            lgMnAttn_seating.hideField("SlNo");
+                            lgMnAttn_seating.fetchData({DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),TermID:dyn_TermID,Attn_Date:dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate(),FromDate:TermFD,ToDate:TermLD,ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes});
+                            break;
+                    default:
+                            isc.say("Default:You are at wrong choice!");
+                            break;
+                }
+            }          
+            else
+            {//class is null
+//                dynfMnAttn_Main3.numCols=4;
+//                dynfMnAttn_Main3.getField('btnMnAttn_FillPresent1').show();
+//                dynfMnAttn_Main3.getField('btnMnAttn_FillPresent2').show();
+            }  
+        }
+        else
+        {
+//            dynfMnAttn_Main1.setValue('cmbMnAttn_class','');
+            lgMnAttn_day.hide();
+            lgMnAttn_week.hide();
+            lgMnAttn_term.hide();
+            lgMnAttn_seating.hide();
+//            dynfMnAttn_Main3.getField('btnMnAttn_FillPresent').hide();
+//            dynfMnAttn_Main3.getField('btnMnAttn_FillPresent1').hide();
+//            dynfMnAttn_Main3.getField('btnMnAttn_FillPresent2').hide();
+            //isc.say('<b>Term doesnot exist for the day</b>');
+        }
+    }
+    else
+    {
+        varWhchView = "1";    
+//        dynfMnAttn_Main3.numCols=4;
+//        dynfMnAttn_Main3.getField('btnMnAttn_FillPresent1').show();
+//        dynfMnAttn_Main3.getField('btnMnAttn_FillPresent2').show();
+    }
+}
+
+function SetSeatArray()
+{
+    attendanceService.callOperation( 
+                                "GetSeatingChart",// operation name 
+                                {DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes
+                                },
+                                "//StudentName|//StudentID|//Row|//Col",
+                                "setStudentSeating(data)"
+                                );
+}
+
+function setStudentSeating(scdata)
+{
+    for(var i = 0; i < scdata.length;i = i + 4)
+        Seatarr.push(new Array(scdata[i+1],scdata[i+2],scdata[i+3])); 
+}
+
+isc.HLayout.create({
+        members:[
+//                dynfMnAttn_Main3
+                    DynamicForm0
+                ],
+        autoDraw:false,
+        ID:"hlMnAttn_Main3"
+})
+
+isc.VLayout.create({
+        members:[
+                
+                hlMnAttn_Main3,
+                hlMnAttn_Main2
+                ],
+        autoDraw:false,
+        ID:"vlMnAttn_main"
+})
+
+isc.HLayout.create({
+        members:[
+//                vlMnAttn_filter,
+                vlMnAttn_main
+                ],
+        autoDraw:false,
+        ID:"hlMnAttn_main"
+})
+
+isc.VLayout.create({
+        members:[
+                hlMnAttn_main
+                ],
+        autoDraw:true,
+        width:"100%",
+        height:"100%"
+})
+//****************MAIN ATTENDANCE PAGE*********************
+
+
+//****************EDIT SEATING CHART***********************
+// Listgrid to show student names for edit seating chart
+isc.ListGrid.create({
+                    autoDraw:false, 
+                    alternateRecordStyles:true,
+                    showHeader:false,
+                    leaveScrollbarGap:false,
+                    fields:[
+                            {
+                            name:"StudentName",
+                            align:'left'
+                            }
+                           ],
+                            baseStyle:"myBoxedSAlternateGridCell",// "myOtherGridCell",
+                            cellClick:function (record, rowNum, colNum)
+                            {
+                                {
+                                    //highlight the selected item
+    
+                                    //copy to cursor
+                                     StdName = record.StudentName;
+                                     StdID   = record.StudentID; 
+                                 }
+                            },
+                            getCellCSSText: function (record, rowNum, colNum) 
+                            {  
+                                  if(record[this.getFieldName(colNum)] == StdName)
+                                  {
+                                    this.refreshFields();
+                                    return "font-weight:bold; color:white; background-color:blue;";
+                                  }  
+                            },
+                            recordClick:function()
+                            {
+                                var record = this.getSelectedRecord();
+                                return(null);
+                            },
+                            bodyBackgroundColor:"#d1d1d1",
+                            ID:"lgSubmnAttn_student"
+});
+
+
+isc.DynamicForm.create({
+    fields:[
+            {
+            defaultValue:"<b>Student&nbsp;Name</b>",
+            name:"stxtMnAtn_StudentNameLbl",
+            showTitle:false,
+            textBoxStyle:"staticTextItemAtnWhiteColr",
+            _constructor:"StaticTextItem"
+            }
+           ],
+    autoDraw:false,
+    backgroundColor:"#549d57",
+    ID:"dynfMnAttn_StudentName"
+})
+
+isc.DynamicForm.create({
+    fields:[
+            {
+            title:"ClearAll",
+            name:"btnFltrAttn_clearSeatingChart",
+            align:"center",
+            colSpan:3, 
+            icon:IconPath+"remove.png",
+            _constructor:"ButtonItem",
+            click:"ClearSeatingChart()"
+            },
+            {
+            title:"Save",
+            name:"btnFltrAttn_saveSeatingChart",
+            align:"center",
+            colSpan:3, 
+            icon:IconPath+"save.png",
+            _constructor:"ButtonItem",
+            click:"CallSvc_DeleteSeatingChart()"
+            },
+            {
+            title:"Back",
+            name:"btnFltrAttn_exitSeatingChart",
+            align:"center",
+            colSpan:3, 
+            _constructor:"ButtonItem",
+            icon:IconPath+"Back.png",
+            click:"back_to_seatingChart()"
+            }          
+           ],
+    autoDraw:false,
+    backgroundColor: "#d1d1d1",
+    ID:"dynfMnAttn_filtersave"
+})
+
+//for clearing edit seating chart
+function ClearSeatingChart()
+{
+    isc.showPrompt("Clearing...");
+
+    StdID   = "";
+    StdName = "";
+
+    for(var i = 0; i < Seatarr1.length; i++)
+    {
+        removeSeatingBuffer(Seatarr1[i][0]);
+    }
+
+    attendanceService.callOperation( 
+                                "DeleteSeatingChart",// operation name 
+                                {DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes
+                                },
+                                "//default:Res",
+                                "(data[0]== 0)?Dummy_OK():isc.say('Delete Operation failed!')"
+                                ); 
+
+    Seatarr1.length = 0;
+    Seatarr.length = 0;
+    lgMnAttn_seatingchart1.setData([]);
+    SetSeatCol1();
+    setSeatArray1();
+    lgMnAttn_seatingchart1.hideField("SlNo");
+    lgMnAttn_seatingchart1.refreshFields();
+    lgMnAttn_seatingchart1.fetchData({DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes});
+    lgMnAttn_seatingchart1.refreshFields();
+    GetStdEditSeatChart();
+    
+    isc.clearPrompt();
+}
+
+//for saving edit seating chart
+function CallSvc_DeleteSeatingChart()
+{
+   isc.showPrompt("Saving...");
+ 
+    attendanceService.callOperation( 
+                                "DeleteSeatingChart",// operation name 
+                                {DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes
+                                },
+                                "//default:Res",
+                                "(data[0]== 0)?saveseatingchart():isc.say('Delete Operation failed!')"
+                                ); 
+   isc.clearPrompt();
+}
+
+function saveseatingchart()
+{  
+    isc.showPrompt("Saving...");
+ 
+    for(var i = 0; i < Seatarr1.length; i++)
+    {
+        CallSvc_SaveSeatingChart(Seatarr1[i][0],Seatarr1[i][1], Seatarr1[i][2]);
+    }  
+    
+    isc.clearPrompt();
+}
+
+function CallSvc_SaveSeatingChart(stdid,row,col) 
+{
+    attendanceService.callOperation( 
+                                "SaveSeatingChart",// operation name 
+                                {DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),StudentID:stdid,row:row,col:col,StaffID:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes
+                                },
+                                "//default:Res",
+                                  "(data[0]== 0)?Dummy_OK():isc.say('Save Operation failed!')"
+                                ); 
+    
+}
+
+//for getting back to attendance seating chart
+function back_to_seatingChart()
+{
+    mwMnAttn_editseating.closeClick();
+    SetSeatCol();
+    SetSeatArray();
+    lgMnAttn_seating.setData([]);
+    lgMnAttn_seating.hideField("SlNo");
+    lgMnAttn_seating.fetchData({DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),TermID:TermID,Attn_Date:dynfMnAttn_Main1.getValue('dtMnAttn_date').toSerializeableDate(),FromDate:TermFD,ToDate:TermLD,ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes});
+}
+
+isc.VLayout.create({
+    members:[
+             dynfMnAttn_StudentName,
+             lgSubmnAttn_student,
+             dynfMnAttn_filtersave
+            ],
+    autoDraw:false,        
+    width:"20%",
+    ID:"vlMnAttn_filter1"
+})
+
+// Listgrid for edit seating chart.
+isc.ListGrid.create({
+                    autoDraw:false, 
+                    dataSource:getAttnEditSeatDS,
+                    alternateRecordStyles:true,
+                    leaveScrollbarGap:false,
+                    showHeader:false,
+                    fields:seatcol,
+                    cellHeight:75,
+                    baseStyle: "myBoxedVClearGridCell",
+                    fastCellUpdates:true,
+                    canAcceptDrop:true,
+                    showHover:false,
+                    cellClick:function(record,rowNum,colNum)
+                    {
+                        if(StdID == "")
+                        {
+                        //highlight the item text
+                       
+                         //copy to cursor
+                            if(record[this.getFieldName(colNum)] != "")//get the student name for new location from the chart itself.
+                            {
+                                for(var i = 0; i < Seatarr1.length; i++)
+                                {
+                                    if((Seatarr1[i][1] == rowNum) && (Seatarr1[i][2] == colNum))
+                                    {         
+                                        StdID   = Seatarr1[i][0];
+                                        StdName = Seatarr1[i][3];
+                                        removeSeatingBuffer(Seatarr1[i][0]);
+                                    }
+                                }        
+                               
+                               GetStdEditSeatChart();
+                               record[this.getFieldName(colNum)] = "";
+                               this.refreshFields();   
+                            }
+                            else
+                            {
+                                isc.say("Please select a student!");
+                            }    
+                         }
+                         else
+                         {
+                                var tmp_StdID = "";
+                                var tmp_StdName = "";
+                                
+                                if (record[this.getFieldName(colNum)] != "")
+                                {
+                                    for (var j = 0; j < Seatarr1.length; j++)
+                                    {
+                                        if (Seatarr1[j][1] == rowNum && Seatarr1[j][2] == colNum)
+                                        {
+                                            var tmp_StdID = Seatarr1[j][0];
+                                            var tmp_StdName = Seatarr1[j][3];
+                                            removeSeatingBuffer(Seatarr1[j][0]); 
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                record[this.getFieldName(colNum)] = StdName;
+                                addSeatingBuffer(StdID, rowNum, colNum, StdName);   
+                                this.refreshFields();   
+                                GetStdEditSeatChart();
+                                
+                                //clear the cursor
+                                StdID   = tmp_StdID;
+                                StdName = tmp_StdName;
+                         }
+                    },
+                    recordClick:function()
+                    {
+                        var record = this.getSelectedRecord();
+                        return(null);
+                    },
+                    bodyBackgroundColor:"#d1d1d1",
+                    ID:"lgMnAttn_seatingchart1"
+})
+
+function addSeatingBuffer(stdid, rownum, colnum, stdname)
+{
+    Seatarr1.push(new Array(stdid, rownum, colnum, stdname));
+}
+
+function removeSeatingBuffer(stdid)
+{
+    // Get the index of the studentid that needs to be removed.
+    for (var i = 0; i < Seatarr1.length; i++)
+    {
+        if (Seatarr1[i][0] == stdid)
+        {
+            Seatarr1.splice(i,1);
+            break;
+        }   
+    }
+}
+
+isc.HLayout.create({
+        members:[
+                vlMnAttn_filter1,
+                lgMnAttn_seatingchart1
+                ],
+        autoDraw:false,
+        ID:"hlMnAttn_Main4"
+})
+
+isc.VLayout.create({
+    members:[
+          hlMnAttn_Main4
+            ],
+    autoDraw:true,        
+    width:"100%",
+    height:"100%",
+    ID:"vlMnAttn_main1"
+})
+
+//CREATE WINDOW FOR THE EDIT SEATING CHART
+isc.Window.create({
+    ID: "mwMnAttn_editseating",
+    height:"100%",
+    width:"100%",
+    showHeaderIcon:false, 
+    showMinimizeButton:false, 
+    showCloseButton:false,
+    animateMinimize:true,
+    showTitle:true,
+    title:"Edit Seating Chart", 
+    showShadow:false, 
+    canDragResize:false, 
+    canDragReposition:false,
+    autoCenter:true,
+    isModal: false,
+    autoDraw: false,
+    items: [vlMnAttn_main1]
+})
+
+//onclick
+function EditSeatingChart_show()
+{
+    if(dynfMnAttn_Main1.getValue('cmbMnAttn_class') == null)
+           //isc.say("Please select a Valid Date and Class!");
+           isc.say('<center><b>This date is not part of currently selected term</b></center>'); //Varun
+    else
+    {   
+        mwMnAttn_editseating.show();
+        SetSeatCol1();
+        setSeatArray1();
+        lgMnAttn_seatingchart1.hideField("SlNo");
+        lgMnAttn_seatingchart1.refreshFields();
+        lgMnAttn_seatingchart1.fetchData({DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes});
+        lgSubmnAttn_student.setData([]);
+        GetStdEditSeatChart();
+    }
+}
+
+function SetSeatCol1()
+{
+    // Empty the seatcol array if it already contains some data.
+    seatcol1.length = 0;
+    
+    seatcol1.push({      name:"SlNo",
+                        width:100,
+                        align:'center'
+                        }
+                    );
+    
+    for(var i=0;i<=15;i++)
+    {
+            seatcol1.push({      name:"col" + i,
+                                width:100,
+                                align:'center',
+                                canSort:false
+                        }); 
+    }
+}
+
+function setSeatArray1()
+{
+    attendanceService.callOperation( 
+                                "GetSeatingChart",// operation name 
+                                {DistrictCode:Dcode,ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),ModifiedBy:StID,SerialNo:SerialNo,UUID:SessionID,Res:DBRes},
+                                "//StudentName|//StudentID|//Row|//Col",
+                                "setStudentSeating1(data)"
+                                );
+}
+
+function setStudentSeating1(scdata)
+{
+    for(var i = 0; i < scdata.length;i = i + 4)
+    {
+        Seatarr1.push(new Array(scdata[i+1],scdata[i+2],scdata[i+3],scdata[i])); 
+    }    
+}
+
+function GetStdEditSeatChart()
+{
+
+  attendanceService.callOperation( 
+                                    "GetClassAttendanceRoster2",
+                                    {
+                                    DistrictCode:Dcode,
+                                    YearID:YearID,
+                                    ClassID:dynfMnAttn_Main1.getValue('cmbMnAttn_class'),
+                                    TermID:dyn_TermID,
+                                    ModifiedBy:StaffID,
+                                    StaffID:StaffID,
+                                    SerialNo:SerialNo,
+                                    UUID:SessionID,
+                                    Res:DBRes
+                                    },
+                                    "//StudentName|//ID",
+                                    "getStdName(data)"
+                                    );
+
+  }
+
+function getStdName(scdata)
+{
+    lgSubmnAttn_student.setData([]);
+
+    lgSubmnAttn_student.data.add({StudentName:"",StudentID:""});
+
+    for(var i=1;i<scdata.length;i=i+2)
+    {
+        var check_ID = false;
+        
+        for(var j = 0; j < Seatarr1.length; j++)
+        {
+            if(Seatarr1[j][0] == scdata[i])
+                 check_ID = true;
+        }
+
+        if(check_ID == false)
+            lgSubmnAttn_student.data.add({StudentName:scdata[i-1],StudentID:scdata[i]});
+    }
+
+    lgSubmnAttn_student.refreshFields(); 
+}
+
+/**
+  * AR: Get settings for showing column 2 on print grid
+  */
+getCheckNoBlock = function() { 
+
+  // Fetch Not Blocked on the selected date
+  attendanceService.callOperation( 
+	"CheckNoBlock", 
+	{ DistrictCode: Dcode,
+	  SchoolCode: Scode,
+	  ModifiedBy: StaffID,
+	  SerialNo:SerialNo,
+	  UUID: SessionID,
+	  Res: DBRes }, 
+   "//default:Res",
+   "callbackGetAttendanceCheckNoBlock(data, rpcResponse, wsRequest)",
+	{ willHandleError:true, showPrompt:false, sendNoQueue:true, bypassCache:true, timeout:360000 } ); 
+}
+
+/**
+  * FD: Callback function to hide column 2
+  */
+callbackGetAttendanceCheckNoBlock = function(responseData, rpcResponse, wsRequest) {
+	// AR: Logic to determine whether column 2 on day view needs to be hidden or not
+	if ( ( responseData == "1" ) || ( responseData == "3" ) ){
+		// AR: hide column 2
+		lgMnAttn_day.resizeField(4,0);
+		lgMnAttn_day.resizeField(5,0);
+		
+		lgMnAttn_day.resizeField(1,230);
+		lgMnAttn_day.resizeField(3,160);
+		
+		lgMnAttn_day.setWidth(450);
+		
+		hlMnAttn_Main2.setWidth(lgMnAttn_day.getWidth() + 5);
+	} else {
+		// AR: ST #35194 
+		lgMnAttn_day.resizeField(1,201);
+	}
+}
+
+
+//****************EDIT SEATING CHART***********************
+//==========User Interface====================
+
+//to set focus on the class select item
+
+//dynfMnAttn_Main1.setValue('cmbMnAttn_class',null);
+//    Cookies.setCookie("ClassID",dynfMnAttn_Main1.getValue('cmbMnAttn_class'),"undefined"); 
+//    Cookies.setCookie("classname",dynfMnAttn_Main1.getField('cmbMnAttn_class').getDisplayValue(),"undefined");
+
+
+/* AR: 34369 -  Removed this piece of code because its redundant */
+
+/* if(classname != 'null' && ClassID !='null')
+{   
+    var map={};                    
+    map[ClassID]=classname;
+    dynfMnAttn_Main1.getItem("cmbMnAttn_class").setValueMap(map); 
+    dynfMnAttn_Main1.setValue("cmbMnAttn_class",ClassID); 
+    
+    if(curDate != null)
+    {
+        curDate =curDate.split(" ");
+        curDate = curDate[0].split("-");
+        dynfMnAttn_Main1.getField('dtMnAttn_date').setValue(curDate[1]+"/"+curDate[2]+"/"+curDate[0]);
+    }
+    getTerms_Bydate();
+}
+else 
+{   
+   dynfMnAttn_Main1.setValue('cmbMnAttn_class',null);
+}
+
+dynfMnAttn_Main1.focusInItem('cmbMnAttn_class');     */
+
+</SCRIPT>
+</BODY>
+</HTML>
